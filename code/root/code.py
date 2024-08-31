@@ -2,94 +2,76 @@ import time
 import board
 import neopixel
 import digitalio
-from adafruit_debouncer import Debouncer
 
-# Define the pin connected to the LED matrix
-PIXEL_PIN = board.GP15
+# Configuration des LEDs
+num_pixels = 64
+pixels = neopixel.NeoPixel(board.D18, num_pixels, auto_write=False)
 
-# Define the number of pixels (8x8)
-NUM_PIXELS = 64
+# Configuration des boutons
+buttons = {
+    "onoff": digitalio.DigitalInOut(board.D2),
+    "snooze": digitalio.DigitalInOut(board.D3),
+    "reset": digitalio.DigitalInOut(board.D4)
+}
+for button in buttons.values():
+    button.direction = digitalio.Direction.INPUT
+    button.pull = digitalio.Pull.UP
 
-# Define the order of pixel colors
-ORDER = neopixel.GRB
+# Variables de temps
+TIMER_DURATION = 2 * 60 * 60  # 2 heures en secondes
+SNOOZE_DURATION = 5 * 60  # 5 minutes en secondes
+ANIMATION_DURATION = 60  # 1 minute en secondes
 
-# Create the NeoPixel object
-pixels = neopixel.NeoPixel(PIXEL_PIN, NUM_PIXELS, brightness=0.2, auto_write=False, pixel_order=ORDER)
+# Variables de contrôle
+timer = 0
+paused = False
+animation_active = False
 
-# Define the pins connected to the buttons
-RESET_PIN = board.GP14
-SNOOZE_PIN = board.GP13
-ONOFF_PIN = board.GP12
+def reset_timer():
+    global timer
+    timer = time.monotonic() + TIMER_DURATION
+    clear_leds()
 
-# Create the button objects
-reset_button = Debouncer(digitalio.DigitalInOut(RESET_PIN), interval=0.01)
-snooze_button = Debouncer(digitalio.DigitalInOut(SNOOZE_PIN), interval=0.01)
-onoff_button = Debouncer(digitalio.DigitalInOut(ONOFF_PIN), interval=0.01)
+def snooze_timer():
+    global timer
+    timer = time.monotonic() + SNOOZE_DURATION
+    clear_leds()
 
-# Define the timer
-timer = 2 * 60 * 60  # 2 hours
+def pause_system():
+    global paused
+    paused = not paused
+    clear_leds()
 
-# Define the system state
-system_on = True
+def clear_leds():
+    pixels.fill((0, 0, 0))
+    pixels.show()
 
-# Define the animation state
-animation_on = False
+def start_animation():
+    global animation_active
+    animation_active = True
+    start_time = time.monotonic()
+    while time.monotonic() - start_time < ANIMATION_DURATION:
+        for i in range(num_pixels):
+            pixels[i] = (255, 0, 0)  # Animation rouge
+        pixels.show()
+        time.sleep(0.1)
+        if not buttons["snooze"].value:
+            snooze_timer()
+            break
+    animation_active = False
+    snooze_timer()
 
-# Main loop
+reset_timer()
+
 while True:
-    # Update the button states
-    reset_button.update()
-    snooze_button.update()
-    onoff_button.update()
-
-    # Check if the reset button was pressed
-    if reset_button.fell:
-        # Turn off the LEDs
-        pixels.fill((0, 0, 0))
-        pixels.show()
-
-        # Start the timer for 2 hours
-        timer = time.monotonic() + 2 * 60 * 60
-
-    # Check if the snooze button was pressed
-    if snooze_button.fell:
-        # Turn off the LEDs
-        pixels.fill((0, 0, 0))
-        pixels.show()
-
-        # Start the timer for 5 minutes
-        timer = time.monotonic() + 5 * 60
-
-    # Check if the on/off button was pressed
-    if onoff_button.fell:
-        # Toggle the system state
-        system_on = not system_on
-
-        # If the system is off
-        if not system_on:
-            # Turn off the LEDs
-            pixels.fill((0, 0, 0))
-            pixels.show()
-
-    # If the system is on
-    if system_on:
-        # If the timer has expired
-        if time.monotonic() > timer:
-            # Start the animation
-            animation_on = True
-
-            # Animate the LEDs
-            for i in range(NUM_PIXELS):
-                pixels[i] = (255, 0, 0)
-                pixels.show()
-                time.sleep(1)
-
-            # Turn off the LEDs
-            pixels.fill((0, 0, 0))
-            pixels.show()
-
-            # Start the timer for 5 minutes
-            timer = time.monotonic() + 5 * 60
-
-            # Stop the animation
-            animation_on = False
+    if not buttons["reset"].value:
+        reset_timer()
+    if not buttons["snooze"].value and not animation_active:
+        snooze_timer()
+    if not buttons["onoff"].value:
+        pause_system()
+    
+    if not paused and time.monotonic() >= timer:
+        start_animation()
+    
+    time.sleep(0.1)
