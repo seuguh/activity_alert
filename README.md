@@ -7,14 +7,20 @@ L'idée:
     un/des boutons
     un on/off?
 
-[on/off][ SNOOOOOOZE ][reset]
+trois boutons:
+[on/off][ SNOOZE ][reset]
+
+on/off met le picopi en veille profonde/ le réactive
+snooze - éteint la platine et relance le timer pour 5 minutes
+reset - relance pour 2h
 
 fonctionnement
-    On programme une durée par appui sur un bouton.
-        délai initial 2h 
-    A l'expiration du délai , la platine s'allume et provoque une gêne
-        possibilité de retarder de 5 minutes en appuyant sur le bouton
-        relance d'un nouveau délai de 2 heures
+    On programme un délai initial de 2h par appui sur un bouton.
+         
+    A l'expiration du délai , la platine s'allume et provoque une gêne visuelle
+       - a l'appui sur snooze, extinction du panneau et relance de 5 minutes
+       - a l'appui sur reset, extinction du panneau et relance d'un nouveau délai de 2 heures
+       - si il n'y a pas d'action au bout d'une minute, passage en off
     
 améliorations
     détection de présence et envoi d'un windows+l en cas d'absence.
